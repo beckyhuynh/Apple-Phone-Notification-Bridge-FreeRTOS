@@ -12,23 +12,23 @@ static bool needsDiscovery = false;
 static bool pendingNotification = false;
 uint8_t latestMessageID[4];
 
-// --- Callback: fires when Data Source sends back the actual notification text ---
-static void dataSourceNotifyCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-  Serial.print("Data Source: ");
+// when data source sends back notification message
+// length is in bytes
+// pData is pointer to array of bytes
+static void dataSourceNotifyCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify){
   for (int i = 0; i < length; i++) {
     if (i > 7) {
-      Serial.print((char)pData[i]);   // after byte 7, it's readable text
-    } else {
-      Serial.printf("%02X ", pData[i]);  // header bytes, print as hex
+      Serial.print((char)pData[i]);
     }
   }
   Serial.println();
 }
 
-// --- Callback: fires the moment a new/updated/removed notification event happens ---
-static void notificationSourceCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify) {
-  if (pData[0] == 0) {
+// when new/updated/removed notification event happens
+static void notificationSourceCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify){
+  if (pData[0] == 0){
     Serial.println("New notification!");
+    // save the notification id for later
     latestMessageID[0] = pData[4];
     latestMessageID[1] = pData[5];
     latestMessageID[2] = pData[6];
@@ -38,25 +38,27 @@ static void notificationSourceCallback(NimBLERemoteCharacteristic* pChar, uint8_
       "Other", "Incoming Call", "Missed Call", "Voicemail", "Social",
       "Schedule", "Email", "News", "Health", "Business", "Location", "Entertainment"
     };
-    if (pData[2] < 12) {
+
+    if (pData[2] < (sizeof(categories) / sizeof(categories[0]))) {
       Serial.printf("Category: %s\n", categories[pData[2]]);
     }
-  } else if (pData[0] == 1) {
-    Serial.println("Notification Modified!");
-  } else if (pData[0] == 2) {
-    Serial.println("Notification Removed!");
   }
+
+  else if (pData[0] == 1) Serial.println("Notification Modified!");
+  else if (pData[0] == 2) Serial.println("Notification Removed!");
+
   pendingNotification = true;
 }
 
-// --- Server callbacks: handles connect/disconnect on the peripheral side ---
-class ServerCallbacks : public NimBLEServerCallbacks {
+// Server callbacks, for connect/disconnect
+class ServerCallbacks : public NimBLEServerCallbacks{
   void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
-    // logs the connecting device's address
     Serial.printf("Client connected: %s\n", connInfo.getAddress().toString().c_str());
-    // KEY TRICK: wrap the EXISTING peripheral connection in a client object,
-    // instead of creating a brand new one (which fails with "connection already exists").
-    pClient = pServer->getClient(connInfo);
+
+    // as soon as connect, switch esp32 to client
+    pClient = pServer -> getClient(connInfo);
+
+    // set discovery, need to find out the services/characteristics
     needsDiscovery = true;
   }
 
@@ -64,10 +66,10 @@ class ServerCallbacks : public NimBLEServerCallbacks {
     Serial.printf("Client disconnected, reason: %d. Restarting advertising...\n", reason);
     pClient = nullptr;
     needsDiscovery = false;
-    NimBLEDevice::startAdvertising();
+    NimBLEDevice::startAdvertising(); // advertise again
   }
 
-  void onAuthenticationComplete(NimBLEConnInfo& connInfo) override {
+  void onAuthenticationComplete(NimBLEConnInfo & connInfo) override{
     Serial.printf("Auth complete. Encrypted: %d, Bonded: %d\n",
                   connInfo.isEncrypted(), connInfo.isBonded());
   }
@@ -93,47 +95,44 @@ void setup() {
   pServer->setCallbacks(new ServerCallbacks());
   Serial.println("Step 6: setCallbacks done");
 
-  // Advertise the ANCS service UUID directly - helps iOS recognize this as
-  // a legitimate notification-consuming accessory.
   NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
   Serial.println("Step 7: getAdvertising done");
 
-  pAdvertising->setName("ESP32-ANCS");
-  Serial.println("Step 8: setName done");
-
+  pAdvertising -> setName("ESP32-ANCS");
   pAdvertising->addServiceUUID(ancsServiceUUID);
-  Serial.println("Step 9: addServiceUUID done");
-
   pAdvertising->enableScanResponse(true);
-  Serial.println("Step 10: enableScanResponse done");
 
   pAdvertising->start();
-  Serial.println("Step 11: advertising started successfully!");
-
-  Serial.println("=== SETUP COMPLETE - Advertising as ESP32-ANCS ===");
-  Serial.println("Go to iPhone Settings > Bluetooth and look for ESP32-ANCS now.");
+  Serial.println("Step 8: advertising started successfully!");
+  Serial.println("Setup Complete, Advertising as ESP32-ANCS");
 }
 
-unsigned long lastHeartbeat = 0;
+unsigned long lastBeat= 0;
 
 void loop() {
-  // Heartbeat every 5 seconds so you can see the board is alive and what state it's in
-  if (millis() - lastHeartbeat > 5000) {
-    lastHeartbeat = millis();
+  // check every 5 seconds to see if board is still alive
+  if (millis() - lastBeat > 5000) {
+    lastBeat = millis();
     if (pClient == nullptr) {
-      Serial.println("[heartbeat] No client connected yet. Still advertising.");
-    } else if (!pClient->isConnected()) {
-      Serial.println("[heartbeat] Client object exists but not connected.");
-    } else if (needsDiscovery) {
-      Serial.println("[heartbeat] Connected, discovery pending...");
-    } else {
-      Serial.println("[heartbeat] Connected and subscribed. Waiting for notifications.");
+      Serial.println("No Client connected yet. still advertising");
+    }
+    
+    else if (!pClient->isConnected()) {
+      Serial.println("Client object exists but not connected.");
+    } 
+    
+    else if (needsDiscovery) {
+      Serial.println("Connected, discovery pending...");
+    } 
+    
+    else {
+      Serial.println("Connected and subscribed. Waiting for notifications.");
     }
   }
 
-  if (needsDiscovery && pClient != nullptr && pClient->isConnected()) {
+  if (needsDiscovery && pClient != nullptr && pClient -> isConnected()) {
     needsDiscovery = false;
-    Serial.println("Discovering ANCS service...");
+    Serial.println("Discovering ANCS service");
 
     NimBLERemoteService* pService = pClient->getService(ancsServiceUUID);
     if (pService == nullptr) {
@@ -160,13 +159,19 @@ void loop() {
     pendingNotification = false;
     Serial.println("Requesting notification details...");
 
+    // sending command packets
+    // val[0] = 0x00 means to fetch details abt a notif
+    // then attach the notif's id
+    // then the attribute id to fetch
     uint8_t val[8] = {0x00, latestMessageID[0], latestMessageID[1], latestMessageID[2], latestMessageID[3], 0x00, 0x00, 0x10};
+    
+    // 0x00- app identifier, 0x01 is title, 0x03 is message- for attribute id
+    // true means with response(wait for acknowledgement from phone)
     pControlPointChar->writeValue(val, 6, true);  // request Title (AttributeID 0x01)
     val[5] = 0x01;
     pControlPointChar->writeValue(val, 8, true);
     val[5] = 0x03;  // request Message (AttributeID 0x03)
     pControlPointChar->writeValue(val, 8, true);
   }
-
   delay(200);
 }
