@@ -52,6 +52,7 @@ static void notificationSourceCallback(NimBLERemoteCharacteristic* pChar, uint8_
 // --- Server callbacks: handles connect/disconnect on the peripheral side ---
 class ServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
+    // logs the connecting device's address
     Serial.printf("Client connected: %s\n", connInfo.getAddress().toString().c_str());
     // KEY TRICK: wrap the EXISTING peripheral connection in a client object,
     // instead of creating a brand new one (which fails with "connection already exists").
@@ -147,7 +148,7 @@ void loop() {
 
     if (pNotifSourceChar && pControlPointChar && pDataSourceChar) {
       Serial.println("All ANCS characteristics found. Subscribing...");
-      pDataSourceChar->subscribe(true, dataSourceNotifyCallback);
+      pDataSourceChar->subscribe(true, dataSourceNotifyCallback); // call these functions whenever these characteristics change
       pNotifSourceChar->subscribe(true, notificationSourceCallback);
       Serial.println("Subscribed! Waiting for notifications...");
     } else {
