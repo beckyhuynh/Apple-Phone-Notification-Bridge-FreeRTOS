@@ -1,9 +1,11 @@
 // #include <Arduino.h>
-#define LED_PIN 2
+#define LED1_PIN 2
 #define BUTTON_PIN 23
+#define LED2_PIN 4
 
 // declare task handle, a variable that points to freeRTOS task
-TaskHandle_t BlinkTaskHandle = NULL;
+TaskHandle_t Task1Handle = NULL;
+TaskHandle_t Task2Handle = NULL;
 
 // Volatile variables for ISR
 volatile bool taskSuspended = false; // determine whether task is suspended or not
@@ -25,36 +27,53 @@ void IRAM_ATTR buttonISR(){
   taskSuspended = !taskSuspended; 
 
   if (taskSuspended) {
-    vTaskSuspend(BlinkTaskHandle);
+    vTaskSuspend(Task1Handle);
   }
 
   // if taskSuspended variable is false, resume execution
   else {
-    vTaskResume(BlinkTaskHandle);
+    vTaskResume(Task1Handle);
   }
 }
 
 // create a task function
 // freertos tasks has to return void and accept a single argument
-void BlinkTask(void* parameter) {
+void Task1(void* parameter) {
+  pinMode(LED1_PIN, OUTPUT);
   for (;;){ // infinite loop
 
-  digitalWrite(LED_PIN, HIGH);
-  Serial.println("BlinkTask: LED ON");
+  digitalWrite(LED1_PIN, HIGH);
+  Serial.println("Task1: LED1 ON");
   vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-  digitalWrite(LED_PIN, LOW);
-  Serial.println("BlinkTask: LED OFF");
+  digitalWrite(LED1_PIN, LOW);
+  Serial.println("Task1: LED1 OFF");
   vTaskDelay(1000/portTICK_PERIOD_MS);
 
-  Serial.print("BlinkTask running on core");
+  Serial.print("task1 running on core");
+  Serial.println(xPortGetCoreID()); // shows which core task is running on
+  }
+}
+
+void Task2(void* parameter) {
+  pinMode(LED2_PIN, OUTPUT);
+  for (;;){ // infinite loop
+
+  digitalWrite(LED2_PIN, HIGH);
+  Serial.println("Task2: LED2 ON");
+  vTaskDelay(333 / portTICK_PERIOD_MS);
+
+  digitalWrite(LED2_PIN, LOW);
+  Serial.println("Task2: LED2 OFF");
+  vTaskDelay(333/portTICK_PERIOD_MS);
+
+  Serial.print("task2 running on core");
   Serial.println(xPortGetCoreID()); // shows which core task is running on
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
 
   // internal pull up resistor
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -64,12 +83,22 @@ void setup() {
 
   // creating the task, choosing a specific core
   xTaskCreatePinnedToCore(
-    BlinkTask, // taskfunction
-    "BlinkTask", //task name
+    Task1, // taskfunction
+    "Task1", //task name
     10000, //stack size(bytes)
     NULL, //parameters
     1,  // priority
-    &BlinkTaskHandle, // Task handle
+    &Task1Handle, // Task handle
+    1 // Core 1
+  );
+
+  xTaskCreatePinnedToCore(
+    Task2, // taskfunction
+    "Task2", //task name
+    10000, //stack size(bytes)
+    NULL, //parameters
+    1,  // priority
+    &Task2Handle, // Task handle
     1 // Core 1
   );
 }
