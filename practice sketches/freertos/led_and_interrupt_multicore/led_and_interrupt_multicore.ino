@@ -99,7 +99,7 @@ void setup() {
     NULL, //parameters
     1,  // priority
     &Task2Handle, // Task handle
-    1 // Core 1
+    0 // Core 0
   );
 }
 
