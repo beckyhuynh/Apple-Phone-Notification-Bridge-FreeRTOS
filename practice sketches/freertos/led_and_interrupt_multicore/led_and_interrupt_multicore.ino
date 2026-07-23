@@ -52,6 +52,8 @@ void Task1(void* parameter) {
 
   Serial.print("task1 running on core");
   Serial.println(xPortGetCoreID()); // shows which core task is running on
+  
+   Serial.printf("Task1 Stack Free: %u bytes\n", uxTaskGetStackHighWaterMark(NULL));
   }
 }
 
@@ -69,11 +71,19 @@ void Task2(void* parameter) {
 
   Serial.print("task2 running on core");
   Serial.println(xPortGetCoreID()); // shows which core task is running on
+  
+  Serial.printf("Task2 Stack Free: %u bytes\n", uxTaskGetStackHighWaterMark(NULL));
+  
   }
 }
 
 void setup() {
   Serial.begin(115200);
+
+  delay(1000);
+
+  Serial.printf("Starting FreeRTOS: Memory Usage\nInitial Free Heap: %u bytes\n", xPortGetFreeHeapSize());
+
 
   // internal pull up resistor
   pinMode(BUTTON_PIN, INPUT_PULLUP);
@@ -104,6 +114,10 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  static uint32_t lastCheck = 0;
+  if (millis() - lastCheck > 5000) {
+    Serial.printf("Free Heap: %u bytes\n", xPortGetFreeHeapSize());
+    lastCheck = millis();
+  }
 
 }
