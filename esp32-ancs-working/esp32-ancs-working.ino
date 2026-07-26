@@ -16,7 +16,7 @@
 
 #define SCREEN_HEIGHT 320
 #define SCREEN_WIDTH 240
-#define FONT_SIZE 2
+#define FONT_SIZE 1
 
 // ANCS service and characteristic UUIDs (Apple-defined, public spec)
 static NimBLEUUID ancsServiceUUID("7905F431-B5CE-4E99-A40F-4B1E122D00D0");
@@ -248,6 +248,27 @@ void BLETask(void *parameter){
   }
 }
 
+// Fills as much of text as fits within maxWidth, returns leftover text via remaining
+String fitLine(String text, int maxWidth, int font, String &remaining) {
+  int fitChars = text.length();
+  while (fitChars > 0 && tft.textWidth(text.substring(0, fitChars), font) > maxWidth) {
+    fitChars--;
+  }
+  // back off to the last space so we don't cut mid-word
+  int lastSpace = text.substring(0, fitChars).lastIndexOf(' ');
+  if (lastSpace > 0 && fitChars < text.length()) fitChars = lastSpace;
+
+  remaining = text.substring(fitChars);
+  remaining.trim();
+  return text.substring(0, fitChars);
+}
+
+void wrapTextTwoLines(String text, int maxWidth, int font, String &line1, String &line2) {
+  line1 = fitLine(text, maxWidth, font, text);
+  line2 = fitLine(text, maxWidth - tft.textWidth("...", font), font, text);
+  if (text.length() > 0) line2 += "...";
+}
+
 void DisplayTask(void *parameter){
   tft.init();
   tft.setRotation(2);
@@ -265,15 +286,15 @@ void DisplayTask(void *parameter){
       if (notifCount != MAX_NOTIFS) {
         notifCount ++;
       }
-
-      // clear screen 
-      tft.fillScreen(TFT_WHITE);
-      tft.setTextColor(TFT_BLACK, TFT_WHITE);
-
       // draw all the notifications stored in the buffer wrap list
       // render notifList
       
       for (int i = 0; i < notifCount; i++) {
+        if (i == 0) {
+          tft.fillScreen(TFT_WHITE);
+          tft.setTextColor(TFT_BLACK, TFT_WHITE);
+        }
+        
         // for every notification 
         // display the app name on left, author name on right same line
         // message at the bottom (move down one line)
@@ -281,11 +302,19 @@ void DisplayTask(void *parameter){
         // if the length cuts out, add the 3 dots...
         // line height is 20
 
-        int currY = SCREEN_HEIGHT - i*40 - 20;
-        tft.drawString(notifList[i].message, 10, currY, FONT_SIZE);
+        int currY = SCREEN_HEIGHT - i*65 - 30;
+        // tft.drawString(notifList[i].message, 10, currY, FONT_SIZE);
 
-        tft.drawString(notifList[i].appName, 10, currY-20, FONT_SIZE);
-        tft.drawString(notifList[i].title, SCREEN_WIDTH-60, currY-20, FONT_SIZE);
+        String line1, line2;
+        wrapTextTwoLines(String(notifList[i].message), SCREEN_WIDTH - 20, FONT_SIZE, line1, line2);
+
+        tft.drawString(line1, 10, currY, FONT_SIZE);
+        if (line2.length() > 0) {
+          tft.drawString(line2, 10, currY + 10, FONT_SIZE);
+        }
+
+        tft.drawString(notifList[i].appName, 10, currY-15, FONT_SIZE);
+        tft.drawString(notifList[i].title, SCREEN_WIDTH-60, currY-15, FONT_SIZE);
       }
 
       // tft.drawString("TESTINGGG", 10, SCREEN_HEIGHT-20, FONT_SIZE);
