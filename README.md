@@ -27,6 +27,7 @@ https://drive.google.com/file/d/1ncuciQe3Naax4GUnjSa6SwU_7K7QUKud/view?usp=shari
 - passive buzzer
 
 ## Pin Mapping
+<img width="822" height="751" alt="image" src="https://github.com/user-attachments/assets/898d3e29-ab69-44e0-81e3-91743b8a72be" />
 
 # Setup
 - Using Arduino IDE, download these libraries: NimBLE-Arduino, TFT_eSPI, XPT2046_Touchscreen
