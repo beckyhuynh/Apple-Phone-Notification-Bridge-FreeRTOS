@@ -31,6 +31,22 @@
 #define ENTRY_HEIGHT 54        // vertical space per notification (header plus 2 message lines)
 #define LINE_SPACING 17        // spacing between header and message lines
 
+#define BUZZER_PIN 4
+
+const int categoryTones[] = {
+  440,   // 0: Other
+  880,   // 1: Incoming Call - higher pitch, more urgent
+  660,   // 2: Missed Call
+  660,   // 3: Voicemail
+  523,   // 4: Social
+  523,   // 5: Schedule
+  523,   // 6: Email
+  392,   // 7: News
+  392,   // 8: Health
+  392,   // 9: Business
+  392,   // 10: Location
+  392    // 11: Entertainment
+};
 
 static bool wasTouching = false;
 static int lastTouchY = 0;
@@ -119,6 +135,14 @@ static void dataSourceNotifyCallback(NimBLERemoteCharacteristic* pChar, uint8_t*
   // Serial.println();
 }
 
+void playTone(int frequency, int durationMs) {
+  ledcAttach(BUZZER_PIN, frequency, 8);   // pin, frequency, 8-bit resolution
+  ledcWrite(BUZZER_PIN, 128);              // ~50% duty cycle = audible tone
+  vTaskDelay(pdMS_TO_TICKS(durationMs));
+  ledcWrite(BUZZER_PIN, 0);                // stop
+  ledcDetach(BUZZER_PIN);
+}
+
 // when new/updated/removed notification event happens
 static void notificationSourceCallback(NimBLERemoteCharacteristic* pChar, uint8_t* pData, size_t length, bool isNotify){
   if (pData[0] == 0){
@@ -136,6 +160,7 @@ static void notificationSourceCallback(NimBLERemoteCharacteristic* pChar, uint8_
 
     if (pData[2] < (sizeof(categories) / sizeof(categories[0]))) {
       Serial.printf("Category: %s\n", categories[pData[2]]);
+      playTone(categoryTones[pData[2]], 200); 
     }
   }
 
