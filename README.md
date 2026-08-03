@@ -19,6 +19,38 @@ As a student or a busy person, sometimes you want to focus on a task at hand and
 https://drive.google.com/file/d/1ncuciQe3Naax4GUnjSa6SwU_7K7QUKud/view?usp=sharing
 
 # Key Architecture
+## Dual Core
+The system is split across two FreeRTOS tasks pinned to separate cores, connected by a single thread-safe queue. 
+BLE Task (Core 0)
+- advertises, bonds
+- subscribes to ANCS
+- assembles notification structs
+- drives buzzer tone
+  
+Display Task (Core 1)
+- owns notifList (circular buffer)
+- renders to touchscreen display
+- handles touch input (clear, scrolling)
+
+separate cores ensure that slower operations on core 1(display writes, touch polling) do not delay time sensitive BLE connection, preventing dropped links
+
+## Dual-Role BLE Architecture (GAP vs. GATT)
+GAP Role (Connection): The ESP32 acts as a peripheral by advertising itself, allowing iOS to initiate and establish the physical connection.
+
+GATT Role (Data Access): ANCS data resides on the iPhone's GATT server, requiring the ESP32 to act as a client to read characteristics and subscribe to notifications over that same link.
+
+The Connection Trick (pServer->getClient)
+The Problem: Standard client APIs try to open a new connection, which fails because iOS already established one.
+
+The Solution: Inside onConnect(), pClient = pServer->getClient(connInfo); wraps the existing connection into a client object, sharing a single physical BLE link for both roles.
+
+## Queue instead of mutex/ shared list
+The BLE task and Display task both need access to notification data, which can require a mutex to prevent race conditions. Instead, the design avoids shared mutable state entirely:
+
+The BLE task never touches the notification list. It only assembles one complete Notification struct per event and pushes it onto notifQueue.
+The Display task is the sole owner of notifList, notifCount, and notifHead, no other task reads or writes them.
+
+Since only one task ever touches the persistent list, there's no shared state to protect, and no mutex is needed. xQueueSend/xQueueReceive handle the one point of actual cross-task interaction safely on their own, the queue is the only thing shared between the two tasks, and it's designed to be thread-safe by default.
 
 # Hardware and Wiring
 ## Parts
