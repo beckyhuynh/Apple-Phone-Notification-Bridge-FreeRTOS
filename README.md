@@ -31,6 +31,7 @@ https://drive.google.com/file/d/1ncuciQe3Naax4GUnjSa6SwU_7K7QUKud/view?usp=shari
 
 # Setup
 - Using Arduino IDE, download these libraries: NimBLE-Arduino, TFT_eSPI, XPT2046_Touchscreen
+- Download the working esp32 ancs ino file
 - For the TFT_eSPI library, look up the needed User_Setup.h config needed for the specific display (linked below)
 - Ensure the ESP32 board is setup to work with the IDE
 - Set the board setting (partition scheme = Large/ Huge App)
