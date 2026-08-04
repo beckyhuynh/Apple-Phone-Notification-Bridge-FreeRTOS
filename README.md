@@ -3,7 +3,7 @@
 Overview: Iphone notification telemetry mirror using an ESP32 MCU, SPI-driven ILI9341 display, and Apple Notification Center Service (ANCS) over Bluetooth Low Energy (BLE)
 
 # Problem Statement
-As a student or a busy person, sometimes you want to focus on a task at hand and not get distracted by apps or scrolling on your phone, while still staying informed on notifications in case there is something important to respond to. A solution to this is to get rid of having access to the phone and instead replace it with a notification bridge. This way all forms of notifications, (calls, emails, messages, etc) can be received on the bridge device instead of your phone, ensuring maximum focus by not letting you touch your phone and avoid enticing social media apps.
+Staying focused on a task often means putting the phone away, but that also means missing calls, messages, or other notifications that might actually be urgent. A solution to this is an ESP32-based notification bridge that mirrors iPhone notifications (calls, messages, and other alerts) onto a dedicated screen, so the phone itself can stay out of reach without losing the ability to notice something important and respond if needed.
 
 # Features
 - Live iOS notification mirroring via ANCS (title/ sender, message, app identifier)
